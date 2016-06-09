@@ -55,12 +55,16 @@ public class StreamingContext implements SubscriptionStreamer {
 
     @Override
     public void stream() throws InterruptedException {
+        streamInternal(new StartingState(this));
+    }
+
+    void streamInternal(final State firstState) throws InterruptedException {
         // Because all the work is processed inside one thread, there is no need in
         // additional lock.
         currentState = new StreamCreatedState(this);
 
         // Add first task - switch to starting state.
-        switchState(new StartingState(this));
+        switchState(firstState);
 
         while (null != currentState) {
             final Runnable task = taskQueue.poll(1, TimeUnit.MINUTES);
@@ -119,11 +123,11 @@ public class StreamingContext implements SubscriptionStreamer {
         }
     }
 
-    public boolean isInState(State state) {
+    public boolean isInState(final State state) {
         return currentState == state;
     }
 
-    public void addTask(Runnable task) {
+    public void addTask(final Runnable task) {
         taskQueue.offer(task);
     }
 
@@ -141,7 +145,7 @@ public class StreamingContext implements SubscriptionStreamer {
         });
     }
 
-    public void onZkException(Exception e) {
+    public void onZkException(final Exception e) {
         LOG.error("ZK exception occurred, switching to CleanupState", e);
         switchState(new CleanupState(this, e));
         if (e instanceof InterruptedException) {
@@ -149,8 +153,8 @@ public class StreamingContext implements SubscriptionStreamer {
         }
     }
 
-    public void onKafkaException(Exception e) {
-        LOG.error("Kafka exception occured, switching to CleanupState", e);
+    public void onKafkaException(final Exception e) {
+        LOG.error("Kafka exception occurred, switching to CleanupState", e);
         switchState(new CleanupState(this, e));
         if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
