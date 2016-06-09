@@ -5,7 +5,6 @@ import de.zalando.aruha.nakadi.service.subscription.model.Session;
 import de.zalando.aruha.nakadi.service.subscription.state.CleanupState;
 import de.zalando.aruha.nakadi.service.subscription.state.StartingState;
 import de.zalando.aruha.nakadi.service.subscription.state.State;
-import de.zalando.aruha.nakadi.service.subscription.state.StreamCreatedState;
 import de.zalando.aruha.nakadi.service.subscription.zk.ZkSubscriptionClient;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -48,7 +47,7 @@ public class StreamingContext implements SubscriptionStreamer {
         this.rebalancer = rebalancer;
         this.timer = timer;
         this.zkClient = zkClient;
-        this.currentState = new StreamCreatedState(this);
+        this.currentState = null;
         this.kafkaClient = kafkaClient;
         this.kafkaPollTimeout = kafkaPollTimeout;
     }
@@ -61,7 +60,11 @@ public class StreamingContext implements SubscriptionStreamer {
     void streamInternal(final State firstState) throws InterruptedException {
         // Because all the work is processed inside one thread, there is no need in
         // additional lock.
-        currentState = new StreamCreatedState(this);
+        currentState = new State(this) {
+            @Override
+            public void onEnter() {
+            }
+        };
 
         // Add first task - switch to starting state.
         switchState(firstState);
